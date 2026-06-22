@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    container_name: rateiq-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../backend/models:/app/backend/models
+      - rateiq-db:/app
+    environment:
+      - MODEL_PATH=/app/backend/models/model_artifacts.pkl
+      - DB_URL=sqlite:////app/rateiq.db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    container_name: rateiq-frontend
+    ports:
+      - "8501:8501"
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      - API_BASE_URL=http://backend:8000
+    restart: unless-stopped
+
+volumes:
+  rateiq-db:
